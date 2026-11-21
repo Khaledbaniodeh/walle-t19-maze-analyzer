@@ -1,0 +1,14 @@
+# Local/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Local testing output and course firmware files: not part of this public site
+*.log
+*.exe
+mm_goal.txt
+.env
+.env.*
+node_modules/
