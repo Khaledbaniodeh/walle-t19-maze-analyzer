@@ -1,0 +1,49 @@
+name: Capture Analyzer Documentation Screenshots
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/capture-documentation-screenshots.yml'
+permissions:
+  contents: write
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install screenshot browser
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Capture real application UI
+        run: |
+          node <<'JS'
+          const {chromium}=require('playwright');
+          const path=require('path');
+          const fs=require('fs');
+          (async()=>{
+            fs.mkdirSync('docs/screenshots',{recursive:true});
+            const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+            const page=await browser.newPage({viewport:{width:1440,height:960},deviceScaleFactor:1,reducedMotion:'reduce'});
+            await page.goto('file://'+path.resolve('index.html'),{waitUntil:'load'});
+            await page.screenshot({path:'docs/screenshots/01-analyzer-overview.png',fullPage:true,animations:'disabled'});
+            await page.locator('#btnDemo').click();
+            await page.locator('#demoBadge').waitFor({state:'visible',timeout:15000});
+            await page.screenshot({path:'docs/screenshots/02-synthetic-demo-maze.png',fullPage:true,animations:'disabled'});
+            const race=page.locator('button[data-mode="2"]');
+            if(await race.count() && await race.isEnabled()){
+              await race.click();
+              await page.screenshot({path:'docs/screenshots/03-synthetic-race-view.png',fullPage:true,animations:'disabled'});
+            }
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+      - name: Commit documentation screenshots
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots/
+          if ! git diff --cached --quiet; then
+            git commit -m "docs: capture real Maze Analyzer UI screenshots"
+            git push origin HEAD:main
+          fi
